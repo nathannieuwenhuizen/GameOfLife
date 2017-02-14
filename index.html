@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+
+    <head>
+        <meta charset="utf-8">
+        <script src="script.js"></script>
+        <script src="grid.js"></script>
+        <script src="Vector.js"></script>
+        <link rel="stylesheet" type="text/css" href="style.css"> 
+    </head>
+
+    <body>
+        <input type="range" id="speedSlider" value="0" step="10"></input>
+        <input type="button" id="nextButton" value="next">
+        <input type="field" value="50" id="gridSize" size="3" maxlength="5" onkeypress='return event.charCode >= 48 && event.charCode <= 57' style="height: 10px;"></input>
+        <input type="button" id="newGrid" value="new grid">
+        <br>
+        <canvas id="canvas" width="800" height="800"></canvas>
+    </body>
+
+</html>
