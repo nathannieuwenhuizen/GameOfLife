@@ -8,6 +8,7 @@ function Vector(x, y, alive) {
     this.y = y || 0;
     this.alive = alive || false;
     this.nextState = this.alive;
+    this.calculated = true;
 }
 //These functions make the code a lot more readable and easier to understand. 
 Vector.prototype = {
