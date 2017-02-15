@@ -5,6 +5,8 @@ class Grid{
         this.rows = rows;
         this.colloms = colloms;
         this.points = [];
+        this.livingPoints = [];
+        
         this.pointSize;
         
         this.makeGrid(this.rows,this.colloms);        
@@ -23,8 +25,8 @@ class Grid{
                 this.points[x][y] = new Vector(x,y,false);
             }
         }
-        this.circle();
-        //this.begin();
+        this.cross(true);
+        
     }
     
     SpawnBlock(mousePos)
@@ -33,9 +35,9 @@ class Grid{
         var y = Math.round((mousePos.y-this.pointSize)/this.pointSize);
         var tempBlock = this.points[x][y];
         if(!tempBlock.alive)
-            tempBlock.alive = tempBlock.nextState = true;
+            tempBlock.nextState = true;
         else
-            tempBlock.alive = tempBlock.nextState = false;
+            tempBlock.nextState = false;
     }
     begin()
     {
@@ -50,16 +52,28 @@ class Grid{
             }
         }
     }
-    cross()
+    cross(dutchAngle)
     {
         for(var x = 0; x < this.points.length; x++)
         {
             for(var y = 0; y < this.points[x].length; y++)
             {
-                if( x == y || x +y ==this.points[0].length )
-                    this.points[x][y].nextState = true;
-                else
-                    this.points[x][y].nextState = false;
+                if(dutchAngle)
+                {
+                    if( x == y || x +y ==this.points[0].length || x == Math.round(this.points.length/2) || y == Math.round(this.points[0].length/2) )
+                        this.points[x][y].nextState = true;
+                    else
+                        this.points[x][y].nextState = false;
+                }
+                else if(!dutchAngle)
+                {
+                    if(x == Math.round(this.points.length/2) || y == Math.round(this.points[0].length/2))
+                        this.points[x][y].nextState = true;
+                    else
+                        this.points[x][y].nextState = false;
+                        
+                }
+                
             }
         }
     }
@@ -80,54 +94,101 @@ class Grid{
         }
     }
     
-    update(context){
+    declareSpecificGridArea( startPos, string)
+    {
+        var x= 0;
+        var y = 0;
+        console.log(string.length);
+        for(var i = 0; i < string.length; i++)
+        {
+            if(string[i] == ",")
+            {
+                y++;
+                x = 0;
+            }
+            else
+                {
+                    var tempPoint = this.points[startPos.x + x][startPos.y + y];
+                    if(string[i] == "1")
+                        tempPoint.nextState = true;
+                }
+            x++;
+        }
+    }
+    
+    renderGrid(context){
+        this.livingPoints = [];
         for(var x = 0; x < this.points.length; x++)
         {            
             for(var y = 0; y < this.points[x].length; y++)
             {
-                this.points[x][y].alive = this.points[x][y].nextState;
+                if(this.points[x][y].calculated)
+                {
+                    
                 
-                if(this.points[x][y].alive)
+                this.points[x][y].calculated = false;
+                this.points[x][y].alive = this.points[x][y].nextState;
+                this.renderPoint(this.points[x][y], context);
+                
+                }
+            }
+        }
+        context.fill();
+    }
+    renderPoint(point,context)
+    {
+        if(point.alive)
+                {
                     context.fillStyle = 'rgba(256,256,256,1)';
+                    this.livingPoints.push(point);
+                }
                 else
                     context.fillStyle = 'rgba(0,0,0,1)';
                 
-            
+                
                 /*context.beginPath();
                 context.arc(x*this.pointSize, y*this.pointSize,this.pointSize/2 -1,0,Math.PI*2);
                 context.fill();
                 context.closePath();*/
-                context.fillRect(x*this.pointSize ,y*this.pointSize,this.pointSize-0,this.pointSize -0);                
-            }
-        }
-        context.fill();
-        
-        
+                context.fillRect(point.x*this.pointSize ,point.y*this.pointSize,this.pointSize-0,this.pointSize -0); 
     }
     LiveOrDie()
     {
         
-        for(var i = 0; i < this.points.length; i++)
+        for(var i = 0; i < this.livingPoints.length; i++)
         {
-            for(var j = 0; j < this.points[i].length; j++)
-            {
-
-                var n = this.getLivingNeighbours(this.points[i][j].x,  this.points[i][j].y).length;
-                if(this.points[i][j].alive)
+           
+                
+                var n = this.getNeighbours(this.livingPoints[i].x,this.livingPoints[i].y,true,false).length;
+                this.GameOfLife(this.livingPoints[i],n);
+                
+                
+                this.deadNeighbours = this.getNeighbours(this.livingPoints[i].x,this.livingPoints[i].y ,false, true);
+                
+                for(var x = 0 ; x < this.deadNeighbours.length; x ++)
                 {
-                    if(n < 2 || n > 3 )
-                        this.points[i][j].nextState = false; 
+                    this.temp = this.getNeighbours(this.deadNeighbours[x].x,this.deadNeighbours[x].y,true, false).length; 
+                    this.GameOfLife(this.deadNeighbours[x],this.temp);  
                 }
-                else
-                {
-                    if(n == 3)
-                        this.points[i][j].nextState = true;
-                }
-            }
+                
+            
         }
     }
-    
-    getLivingNeighbours(x,y)
+    GameOfLife(point, n)
+    {
+        if(point.alive)
+        {
+            if(n < 2 || n > 3 )
+                point.nextState = false; 
+        }
+        else
+        {
+            if(n == 3)
+                point.nextState = true;
+        }
+        point.calculated = true;
+    }
+    getNeighbours(x,y,state,filter)
     {
         var neighbours = [];
         for (var i = -1; i <= 1; i++)
@@ -137,8 +198,9 @@ class Grid{
                 if (i == 0 && j == 0)
                     continue;
                 if (this.isOnGrid(x + i, y + j))
-                    if(this.points[x+i][y+j].alive == true)
-                        neighbours.push(this.points[x + i][ y + j]);                
+                    if(this.points[x+i][y+j].alive == state)
+                        if(!filter || !this.points[x + i][ y + j].calculated)
+                            neighbours.push(this.points[x + i][ y + j]);                
             }
         }
         return neighbours;
